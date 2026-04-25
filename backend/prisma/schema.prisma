@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================
+// ENUMS DE LA APP
+// ==========================
+
+enum StoryGenre {
+  SUSPENSO
+  TERROR
+  FANTASIA
+}
+
+enum StoryStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+// ==========================
+// BETTER AUTH MODELS
+// ==========================
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+  stories  Story[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ipAddress String?
+  userAgent String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id         String @id @default(cuid())
+  accountId  String
+  providerId String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ==========================
+// MODELOS DE LA APP DE HISTORIAS CON IA
+// ==========================
+
+model Story {
+  id String @id @default(cuid())
+
+  title  String?
+  genre  StoryGenre
+  status StoryStatus @default(IN_PROGRESS)
+
+  currentTurn Int @default(1)
+  maxTurns    Int @default(30)
+
+  // Historial completo compatible con Gemini:
+  // [{ role: "user", parts: [{ text: "..." }] }, { role: "model", parts: [{ text: "..." }] }]
+  history Json?
+
+  // Resumen opcional para mostrar en dashboard o historial
+  summary String?
+
+  // Final generado por la IA, si la historia terminó
+  finalText String?
+
+  isCompleted Boolean @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  turns StoryTurn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  completedAt DateTime?
+
+  @@index([userId])
+  @@index([genre])
+  @@index([status])
+  @@map("story")
+}
+
+model StoryTurn {
+  id String @id @default(cuid())
+
+  storyId String
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  turnNumber Int
+
+  // Texto narrativo que devuelve la IA en ese turno
+  narrative String
+
+  // Opciones devueltas por la IA:
+  // ["Abrir la puerta", "Escapar por la ventana", "Gritar pidiendo ayuda"]
+  options Json?
+
+  // Opción elegida por el usuario para avanzar al siguiente turno
+  selectedOption String?
+
+  // Indica si este turno cerró la historia
+  isFinal Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storyId, turnNumber])
+  @@index([storyId])
+  @@map("story_turn")
+}
