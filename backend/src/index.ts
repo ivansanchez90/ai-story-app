@@ -134,6 +134,13 @@ app.post('/api/story/next', async (req, res) => {
   }
 })
 
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'ai-story-backend',
+  })
+})
+
 const PORT = process.env.PORT || 3001
 
 app.listen(PORT, () => {
