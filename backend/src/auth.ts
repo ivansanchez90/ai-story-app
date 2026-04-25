@@ -5,11 +5,16 @@ import { prisma } from './db'
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
+const betterAuthSecret = process.env.BETTER_AUTH_SECRET
 
 if (!googleClientId || !googleClientSecret) {
   throw new Error(
     'Faltan GOOGLE_CLIENT_ID o GOOGLE_CLIENT_SECRET en el archivo .env',
   )
+}
+
+if (!betterAuthSecret) {
+  throw new Error('Falta BETTER_AUTH_SECRET en el archivo .env')
 }
 
 const backendUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3001'
@@ -30,6 +35,8 @@ console.log('TRUSTED_ORIGINS:', trustedOrigins)
 
 export const auth = betterAuth({
   baseURL: backendUrl,
+
+  secret: betterAuthSecret,
 
   trustedOrigins,
 
