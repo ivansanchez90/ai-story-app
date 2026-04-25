@@ -4,6 +4,7 @@ import cors from 'cors'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { toNodeHandler } from 'better-auth/node'
 import { auth } from './auth'
+import { prisma } from './db'
 
 const app = express()
 
@@ -119,6 +120,24 @@ app.post('/api/story/next', async (req, res) => {
 
     res.status(500).json({
       error: 'Hubo un error al generar el siguiente fragmento de la historia.',
+    })
+  }
+})
+
+app.get('/api/db-check', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`
+
+    res.json({
+      status: 'ok',
+      database: 'connected',
+    })
+  } catch (error) {
+    console.error('Error conectando a la base de datos:', error)
+
+    res.status(500).json({
+      status: 'error',
+      database: 'not connected',
     })
   }
 })
