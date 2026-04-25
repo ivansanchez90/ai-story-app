@@ -117,7 +117,7 @@ app.post('/api/story/next', async (req, res) => {
 Eres un narrador experto en historias interactivas de ${genre || 'ficción'}.
 
 La historia debe ser breve, inmersiva y con decisiones claras.
-El usuario está en el turno ${currentTurn || 1} de un máximo de 30.
+El usuario está en el turno ${currentTurn || 1} de un máximo de 12.
 
 HISTORIAL DE LA HISTORIA:
 ${previousHistory || 'Todavía no hay historial. Esta es la primera escena.'}
@@ -128,8 +128,8 @@ ${userChoice || 'Todavía no eligió ninguna opción. Comienza la historia.'}
 REGLAS:
 1. Continúa la historia de forma coherente con el historial.
 2. No repitas exactamente la escena anterior.
-3. Si el turno es menor a 30, devuelve entre 2 y 3 opciones.
-4. Si el turno actual es 30 o si la historia llega a un final natural, termina definitivamente.
+3. Si el turno es menor a 12, devuelve entre 2 y 3 opciones.
+4. Si el turno actual es 12 o si la historia llega a un final natural, termina definitivamente.
 5. La narrativa no debe ser demasiado larga.
 6. Tu respuesta debe ser solamente JSON válido.
 
