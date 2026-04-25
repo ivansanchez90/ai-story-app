@@ -3,12 +3,23 @@ import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { prisma } from './db'
 
+const backendUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3001'
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
 
-export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3001',
+const trustedOrigins = [
+  'http://localhost:5173',
+  'https://history.blackandred.com.ar',
+  frontendUrl,
+]
 
-  trustedOrigins: ['http://localhost:5173', frontendUrl],
+console.log('BETTER_AUTH_URL:', backendUrl)
+console.log('FRONTEND_URL:', frontendUrl)
+console.log('TRUSTED_ORIGINS:', trustedOrigins)
+
+export const auth = betterAuth({
+  baseURL: backendUrl,
+
+  trustedOrigins,
 
   database: prismaAdapter(prisma, {
     provider: 'postgresql',

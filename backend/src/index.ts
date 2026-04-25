@@ -14,6 +14,7 @@ const app = express()
 
 const allowedOrigins = [
   'http://localhost:5173',
+  'https://history.blackandred.com.ar',
   process.env.FRONTEND_URL,
 ].filter(Boolean) as string[]
 
