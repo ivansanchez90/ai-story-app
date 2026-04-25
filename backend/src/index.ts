@@ -1,14 +1,11 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { toNodeHandler } from 'better-auth/node'
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { prisma } from './db'
-
-dotenv.config()
 
 const app = express()
 
@@ -21,10 +18,26 @@ if (!googleClientId || !googleClientSecret) {
   )
 }
 
-export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3001',
+const backendUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3001'
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
 
-  trustedOrigins: ['http://localhost:5173'],
+const trustedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3001',
+  'https://history.blackandred.com.ar',
+  'https://api-history.blackandred.com.ar',
+  frontendUrl,
+  backendUrl,
+]
+
+console.log('BETTER_AUTH_URL:', backendUrl)
+console.log('FRONTEND_URL:', frontendUrl)
+console.log('TRUSTED_ORIGINS:', trustedOrigins)
+
+export const auth = betterAuth({
+  baseURL: backendUrl,
+
+  trustedOrigins,
 
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
@@ -41,10 +54,8 @@ export const auth = betterAuth({
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3001',
-
   'https://history.blackandred.com.ar',
   'https://api-history.blackandred.com.ar',
-
   process.env.FRONTEND_URL,
   process.env.BETTER_AUTH_URL,
 ].filter(Boolean) as string[]
@@ -64,11 +75,6 @@ app.use(
 )
 
 app.all('/api/auth/*splat', toNodeHandler(auth))
-
-// IMPORTANTE:
-// Better Auth debe ir antes de express.json()
-// app.all('/api/auth/*', toNodeHandler(auth))
-// app.all('/api/auth/*splat', toNodeHandler(auth))
 
 // Recién después usamos express.json() para nuestras rutas normales
 app.use(express.json())
