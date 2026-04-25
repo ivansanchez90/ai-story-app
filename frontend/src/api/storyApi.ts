@@ -1,4 +1,4 @@
-import type { GeminiMessage, Genre, StoryResponse } from '../types/story'
+import type { Genre, StoryHistoryItem, StoryResponse } from '../types/story'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
@@ -6,7 +6,7 @@ type GetNextStoryParams = {
   genre: Genre
   currentTurn: number
   userChoice?: string
-  history: GeminiMessage[]
+  history: StoryHistoryItem[]
 }
 
 export async function getNextStory({

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getNextStory } from '../api/storyApi'
-import type { GeminiMessage, Genre, StoryResponse } from '../types/story'
+import type { Genre, StoryHistoryItem, StoryResponse } from '../types/story'
 
 type Props = {
   genre: Genre
@@ -9,7 +9,7 @@ type Props = {
 
 export default function StoryGame({ genre, onBack }: Props) {
   const [story, setStory] = useState<StoryResponse | null>(null)
-  const [history, setHistory] = useState<GeminiMessage[]>([])
+  const [history, setHistory] = useState<StoryHistoryItem[]>([])
   const [turn, setTurn] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
