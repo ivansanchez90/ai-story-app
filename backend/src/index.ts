@@ -57,62 +57,122 @@ app.post('/api/story/next', async (req, res) => {
   try {
     const { genre, currentTurn, userChoice, history } = req.body
 
-    const systemInstruction = `
-      Eres un narrador experto en historias interactivas de ${genre || 'ficción'}.
-      El usuario está en el turno ${currentTurn || 1} de un máximo de 30.
+    console.log('Story request:', {
+      genre,
+      currentTurn,
+      hasUserChoice: Boolean(userChoice),
+      historyLength: Array.isArray(history) ? history.length : 0,
+    })
 
-      REGLAS ESTRICTAS:
-      1. Continúa la historia de forma inmersiva basándote en la última elección del usuario.
-      2. Si el turno es menor a 30, proporciona entre 2 y 3 opciones lógicas para que el usuario decida.
-      3. Si el turno actual es 30 o si las decisiones llevan a un final natural antes, CONCLUYE la historia definitivamente y NO des más opciones.
-      4. La historia debe avanzar de forma coherente, recordando las decisiones anteriores.
-      5. El formato de salida debe ser un JSON estructurado de la siguiente manera:
-      {
-        "narrativa": "Texto detallado de lo que ocurre...",
-        "opciones": ["Opción 1", "Opción 2"],
-        "esFinal": false
-      }
-    `
+    const normalizeHistory = (rawHistory: unknown) => {
+      if (!Array.isArray(rawHistory)) return ''
+
+      return rawHistory
+        .map((item) => {
+          if (!item || typeof item !== 'object') return ''
+
+          const historyItem = item as {
+            type?: string
+            text?: string
+            role?: string
+            parts?: { text?: string }[]
+          }
+
+          // Nuevo formato simple
+          if (historyItem.type === 'narrative' && historyItem.text) {
+            return `Narrador: ${historyItem.text}`
+          }
+
+          if (historyItem.type === 'choice' && historyItem.text) {
+            return `Usuario eligió: ${historyItem.text}`
+          }
+
+          // Formato viejo compatible con Gemini: role + parts
+          if (
+            (historyItem.role === 'user' || historyItem.role === 'model') &&
+            Array.isArray(historyItem.parts)
+          ) {
+            const text = historyItem.parts
+              .map((part) => part.text)
+              .filter(Boolean)
+              .join(' ')
+
+            if (!text) return ''
+
+            return historyItem.role === 'user'
+              ? `Usuario: ${text}`
+              : `Narrador: ${text}`
+          }
+
+          return ''
+        })
+        .filter(Boolean)
+        .slice(-24)
+        .join('\n\n')
+    }
+
+    const previousHistory = normalizeHistory(history)
+
+    const prompt = `
+Eres un narrador experto en historias interactivas de ${genre || 'ficción'}.
+
+La historia debe ser breve, inmersiva y con decisiones claras.
+El usuario está en el turno ${currentTurn || 1} de un máximo de 30.
+
+HISTORIAL DE LA HISTORIA:
+${previousHistory || 'Todavía no hay historial. Esta es la primera escena.'}
+
+ÚLTIMA DECISIÓN DEL USUARIO:
+${userChoice || 'Todavía no eligió ninguna opción. Comienza la historia.'}
+
+REGLAS:
+1. Continúa la historia de forma coherente con el historial.
+2. No repitas exactamente la escena anterior.
+3. Si el turno es menor a 30, devuelve entre 2 y 3 opciones.
+4. Si el turno actual es 30 o si la historia llega a un final natural, termina definitivamente.
+5. La narrativa no debe ser demasiado larga.
+6. Tu respuesta debe ser solamente JSON válido.
+
+Formato obligatorio:
+{
+  "narrativa": "Texto de la historia...",
+  "opciones": ["Opción 1", "Opción 2", "Opción 3"],
+  "esFinal": false
+}
+`
 
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
-      systemInstruction,
       generationConfig: {
         responseMimeType: 'application/json',
       },
     })
 
-    const incomingHistory = Array.isArray(history) ? history : []
-
-    const chat = model.startChat({
-      history: incomingHistory,
-    })
-
-    const promptMessage = userChoice
-      ? `El usuario eligió: "${userChoice}". Continúa la historia.`
-      : 'Comienza la historia introduciendo el escenario, el protagonista y el primer conflicto.'
-
-    const result = await chat.sendMessage(promptMessage)
+    const result = await model.generateContent(prompt)
     const responseText = result.response.text()
 
     const storyData = JSON.parse(responseText)
 
     const updatedHistory = [
-      ...incomingHistory,
+      ...(Array.isArray(history) ? history : []),
+      ...(userChoice
+        ? [
+            {
+              type: 'choice',
+              text: userChoice,
+            },
+          ]
+        : []),
       {
-        role: 'user',
-        parts: [{ text: promptMessage }],
-      },
-      {
-        role: 'model',
-        parts: [{ text: responseText }],
+        type: 'narrative',
+        text: storyData.narrativa,
       },
     ]
 
     res.json({
       narrativa: storyData.narrativa,
       opciones: storyData.esFinal ? [] : (storyData.opciones ?? []),
-      esFinal: storyData.esFinal,
+      esFinal: Boolean(storyData.esFinal),
       updatedHistory,
     })
   } catch (error) {
@@ -120,6 +180,7 @@ app.post('/api/story/next', async (req, res) => {
 
     res.status(500).json({
       error: 'Hubo un error al generar el siguiente fragmento de la historia.',
+      detail: error instanceof Error ? error.message : String(error),
     })
   }
 })
