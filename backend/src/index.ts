@@ -3,53 +3,9 @@ import express from 'express'
 import cors from 'cors'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { toNodeHandler } from 'better-auth/node'
-import { betterAuth } from 'better-auth'
-import { prismaAdapter } from 'better-auth/adapters/prisma'
-import { prisma } from './db'
+import { auth } from './auth'
 
 const app = express()
-
-const googleClientId = process.env.GOOGLE_CLIENT_ID
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
-
-if (!googleClientId || !googleClientSecret) {
-  throw new Error(
-    'Faltan GOOGLE_CLIENT_ID o GOOGLE_CLIENT_SECRET en el archivo .env',
-  )
-}
-
-const backendUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3001'
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
-
-const trustedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3001',
-  'https://history.blackandred.com.ar',
-  'https://api-history.blackandred.com.ar',
-  frontendUrl,
-  backendUrl,
-]
-
-console.log('BETTER_AUTH_URL:', backendUrl)
-console.log('FRONTEND_URL:', frontendUrl)
-console.log('TRUSTED_ORIGINS:', trustedOrigins)
-
-export const auth = betterAuth({
-  baseURL: backendUrl,
-
-  trustedOrigins,
-
-  database: prismaAdapter(prisma, {
-    provider: 'postgresql',
-  }),
-
-  socialProviders: {
-    google: {
-      clientId: googleClientId,
-      clientSecret: googleClientSecret,
-    },
-  },
-})
 
 const allowedOrigins = [
   'http://localhost:5173',
@@ -74,9 +30,11 @@ app.use(
   }),
 )
 
+// IMPORTANTE:
+// Better Auth debe ir antes de express.json()
 app.all('/api/auth/*splat', toNodeHandler(auth))
 
-// Recién después usamos express.json() para nuestras rutas normales
+// Recién después usamos express.json() para tus rutas normales
 app.use(express.json())
 
 // Verificamos que la API Key exista
@@ -86,6 +44,13 @@ if (!process.env.GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim())
+
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'ai-story-backend',
+  })
+})
 
 app.post('/api/story/next', async (req, res) => {
   try {
@@ -156,13 +121,6 @@ app.post('/api/story/next', async (req, res) => {
       error: 'Hubo un error al generar el siguiente fragmento de la historia.',
     })
   }
-})
-
-app.get('/api/health', (_req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'ai-story-backend',
-  })
 })
 
 const PORT = process.env.PORT || 3001
