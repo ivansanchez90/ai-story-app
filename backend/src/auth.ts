@@ -4,12 +4,20 @@ import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { prisma } from './db'
 
 const backendUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3001'
+
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
 
 const trustedOrigins = [
   'http://localhost:5173',
+  'http://localhost:3001',
+
   'https://history.blackandred.com.ar',
+  'https://api-history.blackandred.com.ar',
+
+  'https://*.blackandred.com.ar',
+
   frontendUrl,
+  backendUrl,
 ]
 
 console.log('BETTER_AUTH_URL:', backendUrl)

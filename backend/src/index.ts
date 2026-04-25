@@ -12,25 +12,6 @@ dotenv.config()
 
 const app = express()
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://history.blackandred.com.ar',
-  process.env.FRONTEND_URL,
-].filter(Boolean) as string[]
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true)
-      }
-
-      return callback(new Error(`Origen no permitido por CORS: ${origin}`))
-    },
-    credentials: true,
-  }),
-)
-
 const googleClientId = process.env.GOOGLE_CLIENT_ID
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
 
@@ -57,10 +38,37 @@ export const auth = betterAuth({
   },
 })
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3001',
+
+  'https://history.blackandred.com.ar',
+  'https://api-history.blackandred.com.ar',
+
+  process.env.FRONTEND_URL,
+  process.env.BETTER_AUTH_URL,
+].filter(Boolean) as string[]
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true)
+      }
+
+      console.error('Origen bloqueado por CORS:', origin)
+      return callback(new Error(`Origen no permitido por CORS: ${origin}`))
+    },
+    credentials: true,
+  }),
+)
+
+app.all('/api/auth/*splat', toNodeHandler(auth))
+
 // IMPORTANTE:
 // Better Auth debe ir antes de express.json()
 // app.all('/api/auth/*', toNodeHandler(auth))
-app.all('/api/auth/*splat', toNodeHandler(auth))
+// app.all('/api/auth/*splat', toNodeHandler(auth))
 
 // Recién después usamos express.json() para nuestras rutas normales
 app.use(express.json())
