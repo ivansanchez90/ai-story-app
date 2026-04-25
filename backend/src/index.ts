@@ -142,6 +142,32 @@ app.get('/api/db-check', async (_req, res) => {
   }
 })
 
+app.get('/api/auth-db-check', async (_req, res) => {
+  try {
+    const users = await prisma.user.count()
+    const accounts = await prisma.account.count()
+    const sessions = await prisma.session.count()
+    const verifications = await prisma.verification.count()
+
+    res.json({
+      status: 'ok',
+      tables: {
+        user: users,
+        account: accounts,
+        session: sessions,
+        verification: verifications,
+      },
+    })
+  } catch (error) {
+    console.error('Error verificando tablas de Better Auth:', error)
+
+    res.status(500).json({
+      status: 'error',
+      message: 'No se pudieron consultar las tablas de Better Auth',
+    })
+  }
+})
+
 const PORT = process.env.PORT || 3001
 
 app.listen(PORT, () => {
